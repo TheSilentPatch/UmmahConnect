@@ -5,7 +5,7 @@ import { AuthProvider } from '@/hooks/use-auth';
 
 export const metadata: Metadata = {
   title: 'UmmahConnect',
-  description: 'A place for communities to connect.',
+  description: 'The One Muslim Ummah',
 };
 
 export default function RootLayout({

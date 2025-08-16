@@ -25,13 +25,13 @@ export default function Home() {
       <Image 
         src="https://cdn.discordapp.com/icons/691720369715019827/8bcad886f9edf78b774ef242dd0fb23c.png?size=512&quality=lossless"
         data-ai-hint="community connection"
-        alt="A vibrant illustration of diverse people connecting."
+        alt="السلام عليكم ورحمة الله وبركاته"
         width={400}
         height={400}
         className="mb-8 max-w-sm rounded-lg"
         priority
       />
-      <h2 className="font-headline text-3xl font-bold text-foreground">Welcome to UmmahConnect!</h2>
+      <h2 className="font-headline text-3xl font-bold text-foreground">السلام عليكم ورحمة الله وبركاته</h2>
       <p className="mt-2 max-w-md text-muted-foreground">
         Preparing your experience...
       </p>

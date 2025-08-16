@@ -101,9 +101,10 @@ export function ChatInterface({ channel }: { channel: Channel }) {
         </div>
       </header>
 
-      <ScrollArea className="flex-1 w-full" ref={scrollAreaRef}>
-        <div className="p-4 space-y-6">
-          {loading && (
+      <div className="flex-1">
+        <ScrollArea className="h-[500px]" ref={scrollAreaRef}>
+          <div className="flex flex-col p-4 space-y-6">
+            {loading && (
             <div className="space-y-4 p-4">
               <Skeleton className="h-16 w-3/4 rounded-lg" />
               <div className="flex justify-end">
@@ -156,23 +157,26 @@ export function ChatInterface({ channel }: { channel: Channel }) {
             );
           })}
         </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
 
-      <footer className="border-t bg-background/80 p-4 backdrop-blur-sm">
-        <form onSubmit={handleSubmit} className="flex items-center gap-3">
-          <Input
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            autoComplete="off"
-            className="flex-1"
-          />
-          <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">
-            <Send className="h-5 w-5" />
-            <span className="sr-only">Send</span>
-          </Button>
-        </form>
-      </footer>
+      <div className="sticky bottom-0 left-0 right-0">
+        <footer className="border-t bg-background/80 p-4 backdrop-blur-sm">
+          <form onSubmit={handleSubmit} className="flex items-center gap-3">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              autoComplete="off"
+              className="flex-1"
+            />
+            <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">
+              <Send className="h-5 w-5" />
+              <span className="sr-only">Send</span>
+            </Button>
+          </form>
+        </footer>
+      </div>
     </div>
   );
 }

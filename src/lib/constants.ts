@@ -2,7 +2,7 @@ import type { Channel } from '@/types';
 import { BookOpenCheck, Languages, MessagesSquare, User, Users } from 'lucide-react';
 
 export const CHANNELS: Channel[] = [
-  { id: 'islam-chat', name: 'Islam Chat', access: 'all', icon: MessagesSquare },
+  { id: 'islam-chat', name: 'Islam Chat (mixed)', access: 'all', icon: MessagesSquare },
   { id: 'multilingual-mixed', name: 'Multilingual (mixed)', access: 'all', icon: Languages },
   { id: 'brothers-section', name: "Brothers' Section", access: 'Male', icon: Users },
   { id: 'sisters-section', name: "Sisters' Section", access: 'Female', icon: User },

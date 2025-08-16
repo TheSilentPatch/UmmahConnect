@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters.'),
   country: z.string({ required_error: 'Please select a country.' }),
 });
 
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     values: {
+      name: user?.name || '',
       country: user?.country || ''
     },
     resetOptions: {
@@ -55,8 +57,14 @@ export default function ProfilePage() {
       description: 'Your information has been successfully saved.',
     });
   }
-  
-  const getInitials = (email: string) => email ? email.charAt(0).toUpperCase() : '?';
+
+  // Get initials from name
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center bg-background p-4 sm:p-8">
@@ -64,8 +72,8 @@ export default function ProfilePage() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16 border-2 border-primary">
-              <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${user.email}`} alt={user.email || ''} />
-              <AvatarFallback>{getInitials(user.email)}</AvatarFallback>
+              <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${form.watch('name')}`} alt={form.watch('name') || ''} />
+              <AvatarFallback>{getInitials(form.watch('name'))}</AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="font-headline text-2xl">Profile Settings</CardTitle>
@@ -76,19 +84,36 @@ export default function ProfilePage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-2 rounded-md border p-4">
-                    <p className="text-sm font-medium">Email</p>
-                    <p className="text-muted-foreground">{user.email}</p>
-                </div>
-                <div className="space-y-2 rounded-md border p-4">
-                    <p className="text-sm font-medium">Gender</p>
-                    <p className="text-muted-foreground">{user.gender}</p>
-                </div>
-                <div className="space-y-2 rounded-md border p-4">
-                    <p className="text-sm font-medium">Date of Birth</p>
-                    <p className="text-muted-foreground">{new Date(user.dob).toLocaleDateString()}</p>
-                </div>
-
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        placeholder="Enter your name"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="space-y-2 rounded-md border p-4">
+                <p className="text-sm font-medium">Email</p>
+                <p className="text-muted-foreground">{user.email}</p>
+              </div>
+              <div className="space-y-2 rounded-md border p-4">
+                <p className="text-sm font-medium">Gender</p>
+                <p className="text-muted-foreground">{user.gender}</p>
+              </div>
+              <div className="space-y-2 rounded-md border p-4">
+                <p className="text-sm font-medium">Date of Birth</p>
+                <p className="text-muted-foreground">{new Date(user.dob).toLocaleDateString()}</p>
+              </div>
               <FormField
                 control={form.control}
                 name="country"
@@ -111,7 +136,7 @@ export default function ProfilePage() {
               />
               <div className="flex justify-end">
                 <Button type="submit" className="bg-accent text-accent-foreground hover:bg-accent/90" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
-                    {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+                  {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
                 </Button>
               </div>
             </form>

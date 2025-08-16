@@ -6,13 +6,16 @@ import type { Channel, Message, User } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatedButton } from '@/components/ui/animated-button';
+import { AnimatedInput } from '@/components/ui/animated-input';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export function ChatInterface({ channel }: { channel: Channel }) {
   const { user } = useAuth();
@@ -84,99 +87,158 @@ export function ChatInterface({ channel }: { channel: Channel }) {
   const getInitials = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className="flex flex-1 min-w-0 w-full h-full flex-col bg-card">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b p-4">
-        <div className="flex items-center gap-3">
+    <motion.div 
+      className="flex flex-1 min-w-0 w-full h-full flex-col bg-card"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.header 
+        className="flex h-14 shrink-0 items-center justify-between border-b p-4"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        <motion.div 
+          className="flex items-center gap-3"
+          initial={{ x: -20, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
             <channel.icon className="h-6 w-6 text-muted-foreground" />
             <h2 className="font-headline text-xl font-bold">{channel.name}</h2>
+        </motion.div>
+        <div className="flex items-center gap-2">
+          <motion.div 
+            className="relative w-full max-w-xs"
+            initial={{ x: 20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <AnimatedInput 
+              placeholder="Search messages or users..." 
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </motion.div>
+          <ThemeToggle />
         </div>
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input 
-            placeholder="Search messages or users..." 
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </header>
+      </motion.header>
 
       <div className="flex-1">
         <ScrollArea className="h-[500px]" ref={scrollAreaRef}>
           <div className="flex flex-col p-4 space-y-6">
             {loading && (
-            <div className="space-y-4 p-4">
-              <Skeleton className="h-16 w-3/4 rounded-lg" />
-              <div className="flex justify-end">
+              <div className="space-y-4 p-4">
                 <Skeleton className="h-16 w-3/4 rounded-lg" />
+                <div className="flex justify-end">
+                  <Skeleton className="h-16 w-3/4 rounded-lg" />
+                </div>
+                <Skeleton className="h-16 w-1/2 rounded-lg" />
               </div>
-              <Skeleton className="h-16 w-1/2 rounded-lg" />
-            </div>
-          )}
-          {!loading && filteredMessages.map((msg) => {
-            const isSender = msg.author.id === user?.id;
-            return (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex items-start gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500",
-                  isSender ? "justify-end" : "justify-start"
-                )}
-              >
-                {!isSender && (
-                  <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
-                    <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div className={cn("flex max-w-xs flex-col md:max-w-md", isSender && "items-end")}>
-                  <div
+            )}
+            <AnimatePresence>
+              {!loading && filteredMessages.map((msg, index) => {
+                const isSender = msg.author.id === user?.id;
+                return (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
                     className={cn(
-                      "rounded-lg px-4 py-2 shadow-md",
-                      isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
+                      "flex items-start gap-3",
+                      isSender ? "justify-end" : "justify-start"
                     )}
                   >
-                    <p className="text-sm">{msg.text}</p>
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    {!isSender && <span className="font-medium">{msg.author.name}</span>}
-                    {msg.timestamp && (
-                        <time dateTime={new Date(msg.timestamp).toISOString()}>
-                            {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
-                        </time>
+                    {!isSender && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.05 + 0.1 }}
+                      >
+                        <Avatar className="h-10 w-10 border">
+                          <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
+                          <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
+                        </Avatar>
+                      </motion.div>
                     )}
-                  </div>
-                </div>
-                 {isSender && (
-                  <Avatar className="h-10 w-10 border">
-                    <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
-                    <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    <div className={cn("flex max-w-xs flex-col md:max-w-md", isSender && "items-end")}>
+                      <motion.div
+                        className={cn(
+                          "rounded-lg px-4 py-2 shadow-md",
+                          isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
+                        )}
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.05 + 0.15 }}
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <p className="text-sm">{msg.text}</p>
+                      </motion.div>
+                      <motion.div 
+                        className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: index * 0.05 + 0.2 }}
+                      >
+                        {!isSender && <span className="font-medium">{msg.author.name}</span>}
+                        {msg.timestamp && (
+                            <time dateTime={new Date(msg.timestamp).toISOString()}>
+                                {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
+                            </time>
+                        )}
+                      </motion.div>
+                    </div>
+                     {isSender && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: index * 0.05 + 0.1 }}
+                      >
+                        <Avatar className="h-10 w-10 border">
+                          <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
+                          <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
+                        </Avatar>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
         </ScrollArea>
       </div>
 
-      <div className="sticky bottom-0 left-0 right-0">
+      <motion.div 
+        className="sticky bottom-0 left-0 right-0"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.4 }}
+      >
         <footer className="border-t bg-background/80 p-4 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="flex items-center gap-3">
-            <Input
+            <AnimatedInput
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
               autoComplete="off"
               className="flex-1"
             />
-            <Button type="submit" size="icon" className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0">
+            <AnimatedButton 
+              type="submit" 
+              size="icon" 
+              className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+            >
               <Send className="h-5 w-5" />
               <span className="sr-only">Send</span>
-            </Button>
+            </AnimatedButton>
           </form>
         </footer>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

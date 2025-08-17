@@ -128,7 +128,7 @@ export function ChatInterface({ channel }: { channel: Channel }) {
       </motion.header>
 
       <div className="flex-1">
-        <ScrollArea className="h-[100vh]" ref={scrollAreaRef}>
+        <ScrollArea className="h-[86vh]" ref={scrollAreaRef}>
           <div className="flex flex-col p-4 space-y-6">
             {loading && (
               <div className="space-y-4 p-4">
@@ -219,7 +219,7 @@ export function ChatInterface({ channel }: { channel: Channel }) {
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
       >
-        <footer className="border-t bg-background/80 p-4 backdrop-blur-sm">
+        <footer className="border-t bg-background/80 p-[12px] backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="flex items-center gap-3">
             <AnimatedInput
               value={newMessage}

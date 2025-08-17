@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
 import type { Channel, Message, User } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Send } from 'lucide-react';
+import { Search, Send, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
@@ -16,6 +16,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedButton } from '@/components/ui/animated-button';
 import { AnimatedInput } from '@/components/ui/animated-input';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export function ChatInterface({ channel }: { channel: Channel }) {
   const { user } = useAuth();
@@ -23,6 +34,9 @@ export function ChatInterface({ channel }: { channel: Channel }) {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,6 +98,45 @@ export function ChatInterface({ channel }: { channel: Channel }) {
     setNewMessage('');
   };
 
+  const handleDeleteClick = (message: Message) => {
+    setMessageToDelete(message);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!messageToDelete || !user) return;
+    
+    // Check if the user is the author of the message
+    if (messageToDelete.author.id !== user.id) {
+      toast({
+        title: "Error",
+        description: "You can only delete your own messages",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const messageRef = doc(db, 'channels', channel.id, 'messages', messageToDelete.id);
+      await deleteDoc(messageRef);
+      setDeleteDialogOpen(false);
+      setMessageToDelete(null);
+      toast({
+        title: "Success",
+        description: "Message deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete message. You may not have permission to delete this message.",
+        variant: "destructive",
+      });
+      setDeleteDialogOpen(false);
+      setMessageToDelete(null);
+    }
+  };
+
   const getInitials = (name: string) => name ? name.charAt(0).toUpperCase() : '?';
 
   return (
@@ -143,69 +196,78 @@ export function ChatInterface({ channel }: { channel: Channel }) {
               {!loading && filteredMessages.map((msg, index) => {
                 const isSender = msg.author.id === user?.id;
                 return (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className={cn(
-                      "flex items-start gap-3",
-                      isSender ? "justify-end" : "justify-start"
-                    )}
-                  >
-                    {!isSender && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.05 + 0.1 }}
-                      >
-                        <Avatar className="h-10 w-10 border">
-                          <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
-                          <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
-                        </Avatar>
-                      </motion.div>
-                    )}
-                    <div className={cn("flex max-w-xs flex-col md:max-w-md", isSender && "items-end")}>
-                      <motion.div
-                        className={cn(
-                          "rounded-lg px-4 py-2 shadow-md",
-                          isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
-                        )}
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.05 + 0.15 }}
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <p className="text-sm">{msg.text}</p>
-                      </motion.div>
-                      <motion.div 
-                        className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: index * 0.05 + 0.2 }}
-                      >
-                        {!isSender && <span className="font-medium">{msg.author.name}</span>}
-                        {msg.timestamp && (
-                            <time dateTime={new Date(msg.timestamp).toISOString()}>
-                                {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
-                            </time>
-                        )}
-                      </motion.div>
-                    </div>
-                     {isSender && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: index * 0.05 + 0.1 }}
-                      >
-                        <Avatar className="h-10 w-10 border">
-                          <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
-                          <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
-                        </Avatar>
-                      </motion.div>
-                    )}
-                  </motion.div>
+                                  <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className={cn(
+                    "flex items-start gap-3",
+                    isSender ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {!isSender && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: index * 0.05 + 0.1 }}
+                    >
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
+                        <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
+                      </Avatar>
+                    </motion.div>
+                  )}
+                  <div className={cn("flex max-w-xs flex-col md:max-w-md", isSender && "items-end")}>
+                    <motion.div
+                      className={cn(
+                        "rounded-lg px-4 py-2 shadow-md",
+                        isSender ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
+                      )}
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: index * 0.05 + 0.15 }}
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <p className="text-sm">{msg.text}</p>
+                    </motion.div>
+                    <motion.div 
+                      className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.05 + 0.2 }}
+                    >
+                      {!isSender && <span className="font-medium">{msg.author.name}</span>}
+                      {msg.timestamp && (
+                          <time dateTime={new Date(msg.timestamp).toISOString()}>
+                              {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
+                          </time>
+                      )}
+                      {isSender && (
+                        <button 
+                          onClick={() => handleDeleteClick(msg)}
+                          className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
+                          aria-label="Delete message"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </motion.div>
+                  </div>
+                   {isSender && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: index * 0.05 + 0.1 }}
+                    >
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarImage src={`https://api.dicebear.com/8.x/initials/svg?seed=${msg.author.name}`} />
+                        <AvatarFallback>{getInitials(msg.author.name)}</AvatarFallback>
+                      </Avatar>
+                    </motion.div>
+                  )}
+                </motion.div>
                 );
               })}
             </AnimatePresence>
@@ -239,6 +301,22 @@ export function ChatInterface({ channel }: { channel: Channel }) {
           </form>
         </footer>
       </motion.div>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your message.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </motion.div>
   );
 }

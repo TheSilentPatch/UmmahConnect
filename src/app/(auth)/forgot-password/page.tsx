@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -15,34 +16,32 @@ import { AnimatedButton } from '@/components/ui/animated-button';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
-  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
-export default function LoginPage() {
-  const { login } = useAuth();
+export default function ForgotPasswordPage() {
+  const { sendPasswordResetEmail } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: '',
-      password: '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const success = await login(values.email, values.password);
-    if (!success) {
+    const success = await sendPasswordResetEmail(values.email);
+    if (success) {
       toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email or password. Please try again.',
+        title: 'Password Reset Email Sent',
+        description: 'Please check your email for instructions to reset your password.',
       });
     } else {
-        toast({
-            title: 'Login Successful',
-            description: "Welcome back!",
-        });
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not send password reset email. Please try again.',
+      });
     }
   }
 
@@ -66,14 +65,14 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+            <CardTitle className="font-headline text-2xl">Forgot Password</CardTitle>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <CardDescription>Enter your credentials to access your account</CardDescription>
+            <CardDescription>Enter your email to reset your password</CardDescription>
           </motion.div>
         </CardHeader>
         <CardContent>
@@ -99,25 +98,6 @@ export default function LoginPage() {
                 />
               </motion.div>
               <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </motion.div>
-              <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
@@ -127,7 +107,7 @@ export default function LoginPage() {
                   className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
                   disabled={form.formState.isSubmitting}
                 >
-                  {form.formState.isSubmitting ? "Signing In..." : "Sign In"}
+                  {form.formState.isSubmitting ? "Sending..." : "Send Reset Email"}
                 </AnimatedButton>
               </motion.div>
             </form>
@@ -138,19 +118,9 @@ export default function LoginPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="underline">
-              Sign up
-            </Link>
-          </motion.div>
-          <motion.div
-            className="mt-2 text-center text-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-          >
-            <Link href="/forgot-password" className="underline">
-              Forgot Password?
+            Remember your password?{' '}
+            <Link href="/login" className="underline">
+              Sign In
             </Link>
           </motion.div>
         </CardContent>

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, User as FirebaseUser, sendPasswordResetEmail as firebaseSendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import type { User } from '@/types';
 import { app, auth, db } from '@/lib/firebase';
@@ -14,6 +14,7 @@ interface AuthContextType {
   signup: (details: Omit<User, 'id' | 'email'> & {email: string, password: string}) => Promise<boolean>;
   logout: () => void;
   updateUser: (details: Partial<User>) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      const isAuthPage = pathname === '/login' || pathname === '/signup';
+      const isAuthPage = pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
       if (!user && !isAuthPage) {
         router.push('/login');
       }
@@ -109,8 +110,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const sendPasswordResetEmail = useCallback(async (email: string): Promise<boolean> => {
+    try {
+      await firebaseSendPasswordResetEmail(auth, email);
+      return true;
+    } catch (error) {
+      console.error("Password reset error:", error);
+      return false;
+    }
+  }, []);
 
-  const value = { user, loading, login, signup, logout, updateUser };
+
+  const value = { user, loading, login, signup, logout, updateUser, sendPasswordResetEmail };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

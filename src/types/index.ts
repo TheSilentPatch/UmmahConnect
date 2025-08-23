@@ -18,6 +18,10 @@ export interface Message {
   };
   text: string;
   timestamp: number;
+  edited?: {
+    at: number;
+    by: string;
+  };
 }
 
 export type ChannelId = 'islam-chat' | 'multilingual-mixed' | 'brothers-section' | 'sisters-section' | 'study-circles';

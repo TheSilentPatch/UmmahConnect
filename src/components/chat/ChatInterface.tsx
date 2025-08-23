@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import type { Channel, Message, User } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Send, Trash2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Search, Send, Trash2, Edit, Pencil } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,6 +36,7 @@ export function ChatInterface({ channel }: { channel: Channel }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +53,10 @@ export function ChatInterface({ channel }: { channel: Channel }) {
             text: data.text,
             timestamp: data.timestamp?.toDate().getTime(),
             author: data.author,
+            edited: data.edited ? {
+              at: data.edited.at?.toDate().getTime(),
+              by: data.edited.by
+            } : undefined
         });
       });
       setMessages(msgs);
@@ -96,6 +101,46 @@ export function ChatInterface({ channel }: { channel: Channel }) {
     });
 
     setNewMessage('');
+  };
+
+  const handleEditClick = (message: Message) => {
+    if (message.author.id !== user?.id) return;
+    setEditingMessage(message);
+    setNewMessage(message.text);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setNewMessage('');
+  };
+
+  const handleEditSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingMessage || !user || !newMessage.trim()) return;
+
+    try {
+      const messageRef = doc(db, 'channels', channel.id, 'messages', editingMessage.id);
+      await updateDoc(messageRef, {
+        text: newMessage.trim(),
+        edited: {
+          at: Timestamp.now(),
+          by: user.id
+        }
+      });
+      setEditingMessage(null);
+      setNewMessage('');
+      toast({
+        title: "Success",
+        description: "Message updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update message",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDeleteClick = (message: Message) => {
@@ -244,14 +289,29 @@ export function ChatInterface({ channel }: { channel: Channel }) {
                               {formatDistanceToNow(new Date(msg.timestamp), { addSuffix: true })}
                           </time>
                       )}
+                      {msg.edited && (
+                        <span className="flex items-center gap-1 italic text-xs" title={`Edited at ${format(new Date(msg.edited.at), "MMM d, yyyy h:mm a")}`}>
+                          <Pencil className="h-3 w-3" />
+                          (edited)
+                        </span>
+                      )}
                       {isSender && (
-                        <button 
-                          onClick={() => handleDeleteClick(msg)}
-                          className="ml-2 text-destructive hover:text-destructive/80 transition-colors"
-                          aria-label="Delete message"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        <div className="flex gap-1 ml-2">
+                          <button 
+                            onClick={() => handleEditClick(msg)}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label="Edit message"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteClick(msg)}
+                            className="text-destructive hover:text-destructive/80 transition-colors"
+                            aria-label="Delete message"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       )}
                     </motion.div>
                   </div>
@@ -282,11 +342,22 @@ export function ChatInterface({ channel }: { channel: Channel }) {
         transition={{ delay: 0.4 }}
       >
         <footer className="border-t bg-background/80 p-[12px] backdrop-blur-sm">
-          <form onSubmit={handleSubmit} className="flex items-center gap-3">
+          {editingMessage && (
+            <div className="text-sm text-muted-foreground mb-2 flex items-center justify-between">
+              <span>Editing message</span>
+              <button 
+                onClick={handleCancelEdit}
+                className="text-destructive hover:text-destructive/80 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          <form onSubmit={editingMessage ? handleEditSubmit : handleSubmit} className="flex items-center gap-3">
             <AnimatedInput
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={editingMessage ? "Edit your message..." : "Type a message..."}
               autoComplete="off"
               className="flex-1"
             />
@@ -294,9 +365,10 @@ export function ChatInterface({ channel }: { channel: Channel }) {
               type="submit" 
               size="icon" 
               className="bg-accent text-accent-foreground hover:bg-accent/90 shrink-0"
+              disabled={!newMessage.trim()}
             >
               <Send className="h-5 w-5" />
-              <span className="sr-only">Send</span>
+              <span className="sr-only">{editingMessage ? "Update" : "Send"}</span>
             </AnimatedButton>
           </form>
         </footer>

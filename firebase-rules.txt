@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to read their own user document
+    match /users/{userId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+    
+    // Channels collection rules
+    match /channels/{channelId} {
+      // Allow authenticated users to read channel data
+      allow read: if request.auth != null;
+      
+      // Messages subcollection rules
+      match /messages/{messageId} {
+        // Allow authenticated users to read messages
+        allow read: if request.auth != null;
+        
+        // Allow authenticated users to create messages
+        allow create: if request.auth != null && 
+          request.resource.data.author.id == request.auth.uid &&
+          request.resource.data.keys().hasOnly(['text', 'author', 'timestamp']) &&
+          request.resource.data.author is map &&
+          request.resource.data.author.keys().hasOnly(['id', 'name', 'gender']) &&
+          request.resource.data.text is string &&
+          request.resource.data.timestamp is timestamp;
+        
+        // Allow users to update only their own messages
+        allow update: if request.auth != null && 
+          resource.data.author.id == request.auth.uid &&
+          // Only allow updating the text field and edited field
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited']) &&
+          // If edited field is present, validate its structure
+          (request.resource.data.edited == null || (
+            request.resource.data.edited is map &&
+            request.resource.data.edited.keys().hasOnly(['at', 'by']) &&
+            request.resource.data.edited.at is timestamp &&
+            request.resource.data.edited.by is string
+          ));
+        
+        // Allow users to delete only their own messages
+        allow delete: if request.auth != null && 
+          resource.data.author.id == request.auth.uid;
+      }
+    }
+  }
+}

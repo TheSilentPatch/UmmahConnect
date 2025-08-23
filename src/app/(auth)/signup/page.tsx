@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { format, parse, isValid } from 'date-fns';
+import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,6 @@ const formSchema = z.object({
 export default function SignupPage() {
   const { signup } = useAuth();
   const { toast } = useToast();
-  const [dobString, setDobString] = React.useState('');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,6 +46,7 @@ export default function SignupPage() {
       name: '',
       email: '',
       password: '',
+      dob: undefined,
     },
   });
 
@@ -70,16 +70,6 @@ export default function SignupPage() {
     }
   }
   
-  const dobValue = form.watch('dob');
-
-  React.useEffect(() => {
-    if (dobValue) {
-      setDobString(format(dobValue, 'yyyy-MM-dd'));
-    } else {
-        setDobString('');
-    }
-  }, [dobValue]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -166,9 +156,9 @@ export default function SignupPage() {
                         <FormControl>
                         <SelectTrigger><SelectValue placeholder="Select your country" /></SelectTrigger>
                         </FormControl>
-                        <SelectContent><SelectContent>
+                        <SelectContent>
                             {COUNTRIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent></SelectContent>
+                        </SelectContent>
                     </Select>
                     <FormMessage />
                     </FormItem>
@@ -186,37 +176,29 @@ export default function SignupPage() {
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <FormControl>
-                                        <div className="relative">
-                                            <Input
-                                                value={dobString}
-                                                onChange={(e) => {
-                                                    const value = e.target.value;
-                                                    setDobString(value);
-                                                    const date = parse(value, 'yyyy-MM-dd', new Date());
-                                                    if (isValid(date)) {
-                                                        form.setValue('dob', date, { shouldValidate: true });
-                                                    } else {
-                                                        form.setValue('dob', undefined as any, { shouldValidate: true });
-                                                    }
-                                                }}
-                                                placeholder="YYYY-MM-DD"
-                                            />
-                                            <CalendarIcon className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-50" />
-                                        </div>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-between font-normal",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {field.value ? format(field.value, "PPP") : <span>Select date</span>}
+                                            <CalendarIcon className="h-4 w-4 opacity-50" />
+                                        </Button>
                                     </FormControl>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto overflow-hidden p-0" align="start">
                                     <Calendar
                                         mode="single"
                                         selected={field.value}
+                                        captionLayout="dropdown"
                                         onSelect={(date) => {
-                                          if (date) {
-                                            form.setValue('dob', date, { shouldValidate: true });
-                                            setDobString(format(date, 'yyyy-MM-dd'));
-                                          }
+                                            field.onChange(date);
                                         }}
-                                        disabled={(date) => date > new Date() || date < new Date('1900-01-01')}
-                                        initialFocus
+                                        disabled={(date) => 
+                                            date > new Date() || date < new Date("1900-01-01")
+                                        }
                                     />
                                 </PopoverContent>
                             </Popover>
